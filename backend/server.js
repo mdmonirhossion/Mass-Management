@@ -54,10 +54,14 @@ const PORT = process.env.PORT || 5000;
 connectDB()
     .then(async () => {
         await seedDefaultMembers();
-        app.listen(PORT, () => {
-            console.log(`Server listening on port ${PORT}`);
-        });
+        if (process.env.NODE_ENV !== 'production') {
+            app.listen(PORT, () => {
+                console.log(`Server listening on port ${PORT}`);
+            });
+        }
     })
     .catch((err) => {
         console.error("Failed to start server due to DB connection error:", err.message);
     });
+
+module.exports = app;
