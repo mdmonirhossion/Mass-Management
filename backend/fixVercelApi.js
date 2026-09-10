@@ -1,4 +1,11 @@
-const API_BASE = '/api';
+const fs = require('fs');
+const path = require('path');
+
+// Update frontend/src/services/api.js
+const apiPath = path.join(__dirname, '../frontend/src/services/api.js');
+const apiContent = `const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
+    ? import.meta.env.VITE_API_BASE_URL
+    : '/api';
 
 async function parseResponse(res, fallbackMessage) {
     const contentType = res.headers.get('content-type') || '';
@@ -7,7 +14,7 @@ async function parseResponse(res, fallbackMessage) {
             const data = await res.json();
             throw new Error(data.message || fallbackMessage);
         } else {
-            throw new Error(`Backend Connection Error (${res.status}): Please check Vercel backend deployment status.`);
+            throw new Error(\`Backend Connection Error (\${res.status}): Make sure backend Vercel URL is set in VITE_API_BASE_URL.\`);
         }
     }
     if (contentType.includes('application/json')) {
@@ -17,7 +24,7 @@ async function parseResponse(res, fallbackMessage) {
 }
 
 export async function loginUser(username, password) {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(\`\${API_BASE}/auth/login\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -26,7 +33,7 @@ export async function loginUser(username, password) {
 }
 
 export async function registerUser(name, email, password) {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    const res = await fetch(\`\${API_BASE}/auth/register\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })
@@ -35,17 +42,17 @@ export async function registerUser(name, email, password) {
 }
 
 export async function fetchSummary(month) {
-    const res = await fetch(`${API_BASE}/summary?month=${encodeURIComponent(month)}`);
+    const res = await fetch(\`\${API_BASE}/summary?month=\${encodeURIComponent(month)}\`);
     return parseResponse(res, 'Failed to fetch summary data');
 }
 
 export async function fetchMembers() {
-    const res = await fetch(`${API_BASE}/members`);
+    const res = await fetch(\`\${API_BASE}/members\`);
     return parseResponse(res, 'Failed to fetch members');
 }
 
 export async function addMember(name, room) {
-    const res = await fetch(`${API_BASE}/members`, {
+    const res = await fetch(\`\${API_BASE}/members\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, room })
@@ -54,17 +61,17 @@ export async function addMember(name, room) {
 }
 
 export async function deleteMember(id) {
-    const res = await fetch(`${API_BASE}/members/${id}`, { method: 'DELETE' });
+    const res = await fetch(\`\${API_BASE}/members/\${id}\`, { method: 'DELETE' });
     return parseResponse(res, 'Failed to delete member');
 }
 
 export async function fetchMeals(month) {
-    const res = await fetch(`${API_BASE}/meals?month=${encodeURIComponent(month)}`);
+    const res = await fetch(\`\${API_BASE}/meals?month=\${encodeURIComponent(month)}\`);
     return parseResponse(res, 'Failed to fetch meals');
 }
 
 export async function saveMeals(month, meals, date) {
-    const res = await fetch(`${API_BASE}/meals`, {
+    const res = await fetch(\`\${API_BASE}/meals\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month, meals, date })
@@ -73,12 +80,12 @@ export async function saveMeals(month, meals, date) {
 }
 
 export async function fetchBazar(month) {
-    const res = await fetch(`${API_BASE}/bazar?month=${encodeURIComponent(month)}`);
+    const res = await fetch(\`\${API_BASE}/bazar?month=\${encodeURIComponent(month)}\`);
     return parseResponse(res, 'Failed to fetch bazar data');
 }
 
 export async function addBazar(entry) {
-    const res = await fetch(`${API_BASE}/bazar`, {
+    const res = await fetch(\`\${API_BASE}/bazar\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
@@ -87,7 +94,7 @@ export async function addBazar(entry) {
 }
 
 export async function updateBazar(id, items, amount) {
-    const res = await fetch(`${API_BASE}/bazar/${id}`, {
+    const res = await fetch(\`\${API_BASE}/bazar/\${id}\`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items, amount })
@@ -96,17 +103,17 @@ export async function updateBazar(id, items, amount) {
 }
 
 export async function deleteBazar(id) {
-    const res = await fetch(`${API_BASE}/bazar/${id}`, { method: 'DELETE' });
+    const res = await fetch(\`\${API_BASE}/bazar/\${id}\`, { method: 'DELETE' });
     return parseResponse(res, 'Failed to delete bazar entry');
 }
 
 export async function fetchBills(month) {
-    const res = await fetch(`${API_BASE}/bills?month=${encodeURIComponent(month)}`);
+    const res = await fetch(\`\${API_BASE}/bills?month=\${encodeURIComponent(month)}\`);
     return parseResponse(res, 'Failed to fetch bills');
 }
 
 export async function addBill(name, amount, month) {
-    const res = await fetch(`${API_BASE}/bills`, {
+    const res = await fetch(\`\${API_BASE}/bills\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, amount, month })
@@ -115,7 +122,7 @@ export async function addBill(name, amount, month) {
 }
 
 export async function updateBill(id, amount) {
-    const res = await fetch(`${API_BASE}/bills/${id}`, {
+    const res = await fetch(\`\${API_BASE}/bills/\${id}\`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount })
@@ -124,15 +131,19 @@ export async function updateBill(id, amount) {
 }
 
 export async function deleteBill(id) {
-    const res = await fetch(`${API_BASE}/bills/${id}`, { method: 'DELETE' });
+    const res = await fetch(\`\${API_BASE}/bills/\${id}\`, { method: 'DELETE' });
     return parseResponse(res, 'Failed to delete bill');
 }
 
 export async function settleMember(member, month) {
-    const res = await fetch(`${API_BASE}/settlements`, {
+    const res = await fetch(\`\${API_BASE}/settlements\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ member, month })
     });
     return parseResponse(res, 'Failed to settle member');
 }
+`;
+
+fs.writeFileSync(apiPath, apiContent, 'utf8');
+console.log('frontend/src/services/api.js updated with safe response parsing!');
