@@ -12,6 +12,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serverless DB Connection Middleware (Guarantees DB connection for Vercel functions)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        return res.status(500).json({
+            message: 'Database Connection Error: Could not connect to MongoDB Atlas.',
+            error: err.message
+        });
+    }
+});
+
 // Auto-seed default members if DB is empty
 const seedDefaultMembers = async () => {
     try {
@@ -50,18 +63,18 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Connect to Database first, then start listening
-connectDB()
-    .then(async () => {
-        await seedDefaultMembers();
-        if (process.env.NODE_ENV !== 'production') {
+// Start local server if not on Vercel
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    connectDB()
+        .then(async () => {
+            await seedDefaultMembers();
             app.listen(PORT, () => {
                 console.log(`Server listening on port ${PORT}`);
             });
-        }
-    })
-    .catch((err) => {
-        console.error("Failed to start server due to DB connection error:", err.message);
-    });
+        })
+        .catch((err) => {
+            console.error("Failed to start server due to DB connection error:", err.message);
+        });
+}
 
 module.exports = app;
