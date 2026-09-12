@@ -1,17 +1,22 @@
 const Meal = require('../models/Meal');
 
-// Get meals for a specific month
+// Get meals for a specific month and optional date
 exports.getMeals = async (req, res) => {
     try {
         const month = req.query.month || 'September 2026';
-        const meals = await Meal.find({ month });
+        const date = req.query.date;
+        const query = { month };
+        if (date) {
+            query.date = date;
+        }
+        const meals = await Meal.find(query);
         res.json(meals);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching meals', error: error.message });
     }
 };
 
-// Save or update meals for a specific month
+// Save or update meals for a specific month & date
 exports.saveMeals = async (req, res) => {
     try {
         const { month, meals, date } = req.body;
@@ -21,18 +26,21 @@ exports.saveMeals = async (req, res) => {
 
         const mealDate = date || new Date().toISOString().split('T')[0];
 
-        // Process each member meal entry
+        // Process each member meal entry for the specific date
         const savedMeals = [];
         for (const item of meals) {
             const { member, breakfast, lunch, dinner } = item;
             if (!member) continue;
 
-            const existingMeal = await Meal.findOne({ member, month });
+            const parsedBreakfast = parseFloat(breakfast) || 0;
+            const parsedLunch = parseFloat(lunch) || 0;
+            const parsedDinner = parseFloat(dinner) || 0;
+
+            const existingMeal = await Meal.findOne({ member, date: mealDate, month });
             if (existingMeal) {
-                existingMeal.breakfast = Number(breakfast) || 0;
-                existingMeal.lunch = Number(lunch) || 0;
-                existingMeal.dinner = Number(dinner) || 0;
-                existingMeal.date = mealDate;
+                existingMeal.breakfast = parsedBreakfast;
+                existingMeal.lunch = parsedLunch;
+                existingMeal.dinner = parsedDinner;
                 await existingMeal.save();
                 savedMeals.push(existingMeal);
             } else {
@@ -40,9 +48,9 @@ exports.saveMeals = async (req, res) => {
                     member,
                     month,
                     date: mealDate,
-                    breakfast: Number(breakfast) || 0,
-                    lunch: Number(lunch) || 0,
-                    dinner: Number(dinner) || 0
+                    breakfast: parsedBreakfast,
+                    lunch: parsedLunch,
+                    dinner: parsedDinner
                 });
                 await newMeal.save();
                 savedMeals.push(newMeal);

@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
+    ? import.meta.env.VITE_API_BASE_URL
+    : '/api';
 
 async function parseResponse(res, fallbackMessage) {
     const contentType = res.headers.get('content-type') || '';
@@ -7,7 +9,7 @@ async function parseResponse(res, fallbackMessage) {
             const data = await res.json();
             throw new Error(data.message || fallbackMessage);
         } else {
-            throw new Error(`Backend Connection Error (${res.status}): Please check Vercel backend deployment status.`);
+            throw new Error(`Backend Connection Error (${res.status}): Make sure backend Vercel URL is set in VITE_API_BASE_URL.`);
         }
     }
     if (contentType.includes('application/json')) {
@@ -58,8 +60,10 @@ export async function deleteMember(id) {
     return parseResponse(res, 'Failed to delete member');
 }
 
-export async function fetchMeals(month) {
-    const res = await fetch(`${API_BASE}/meals?month=${encodeURIComponent(month)}`);
+export async function fetchMeals(month, date) {
+    let url = `${API_BASE}/meals?month=${encodeURIComponent(month)}`;
+    if (date) url += `&date=${encodeURIComponent(date)}`;
+    const res = await fetch(url);
     return parseResponse(res, 'Failed to fetch meals');
 }
 

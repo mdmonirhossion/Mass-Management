@@ -65,8 +65,10 @@ export async function deleteMember(id) {
     return parseResponse(res, 'Failed to delete member');
 }
 
-export async function fetchMeals(month) {
-    const res = await fetch(\`\${API_BASE}/meals?month=\${encodeURIComponent(month)}\`);
+export async function fetchMeals(month, date) {
+    let url = \`\${API_BASE}/meals?month=\${encodeURIComponent(month)}\`;
+    if (date) url += \`&date=\${encodeURIComponent(date)}\`;
+    const res = await fetch(url);
     return parseResponse(res, 'Failed to fetch meals');
 }
 

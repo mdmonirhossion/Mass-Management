@@ -23,11 +23,12 @@ exports.getSummary = async (req, res) => {
             totalBazar += Number(entry.amount) || 0;
         });
 
-        // Calculate Total Meals
+        // Calculate Total Meals across all dates in the month
         let totalMeal = 0;
         meals.forEach(meal => {
-            totalMeal += (Number(meal.breakfast) || 0) + (Number(meal.lunch) || 0) + (Number(meal.dinner) || 0);
+            totalMeal += (parseFloat(meal.breakfast) || 0) + (parseFloat(meal.lunch) || 0) + (parseFloat(meal.dinner) || 0);
         });
+        totalMeal = Number(totalMeal.toFixed(2));
 
         // Calculate Meal Rate
         const mealRate = totalMeal > 0 ? totalBazar / totalMeal : 0;
@@ -52,11 +53,13 @@ exports.getSummary = async (req, res) => {
                 }
             });
 
-            // Meals taken by this member
-            const memberMealDoc = meals.find(m => m.member === member.name);
-            const memberMeal = memberMealDoc 
-                ? (Number(memberMealDoc.breakfast) || 0) + (Number(memberMealDoc.lunch) || 0) + (Number(memberMealDoc.dinner) || 0)
-                : 0;
+            // Meals taken by this member across all dates in the month
+            const memberMealDocs = meals.filter(m => m.member === member.name);
+            let memberMeal = 0;
+            memberMealDocs.forEach(m => {
+                memberMeal += (parseFloat(m.breakfast) || 0) + (parseFloat(m.lunch) || 0) + (parseFloat(m.dinner) || 0);
+            });
+            memberMeal = Number(memberMeal.toFixed(2));
 
             const mealCost = memberMeal * mealRate;
             const balance = memberBazar - mealCost;

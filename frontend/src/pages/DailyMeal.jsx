@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchMembers, fetchMeals, saveMeals } from '../services/api';
-import { Save, Lock, ShieldAlert } from 'lucide-react';
+import { Save, Lock } from 'lucide-react';
 
 export default function DailyMeal({ currentMonth, user }) {
   const [members, setMembers] = useState([]);
@@ -12,16 +12,18 @@ export default function DailyMeal({ currentMonth, user }) {
   const canEdit = user?.role === 'admin' || user?.isGranted;
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    Promise.all([fetchMembers(), fetchMeals(currentMonth)])
+    Promise.all([fetchMembers(), fetchMeals(currentMonth, mealDate)])
       .then(([membersList, mealsList]) => {
+        if (!isMounted) return;
         setMembers(membersList);
         const map = {};
         mealsList.forEach((m) => {
           map[m.member] = {
-            breakfast: m.breakfast || 0,
-            lunch: m.lunch || 0,
-            dinner: m.dinner || 0
+            breakfast: m.breakfast !== undefined && m.breakfast !== null ? m.breakfast : '',
+            lunch: m.lunch !== undefined && m.lunch !== null ? m.lunch : '',
+            dinner: m.dinner !== undefined && m.dinner !== null ? m.dinner : ''
           };
         });
         setMealData(map);
@@ -29,21 +31,22 @@ export default function DailyMeal({ currentMonth, user }) {
       })
       .catch((err) => {
         console.error(err);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       });
-  }, [currentMonth]);
+
+    return () => { isMounted = false; };
+  }, [currentMonth, mealDate]);
 
   const handleInputChange = (memberName, field, value) => {
     if (!canEdit) return;
-    const num = Math.max(0, parseInt(value) || 0);
     setMealData((prev) => ({
       ...prev,
       [memberName]: {
-        breakfast: 0,
-        lunch: 0,
-        dinner: 0,
+        breakfast: '',
+        lunch: '',
+        dinner: '',
         ...prev[memberName],
-        [field]: num
+        [field]: value
       }
     }));
   };
@@ -57,13 +60,13 @@ export default function DailyMeal({ currentMonth, user }) {
     try {
       const mealsArray = members.map((m) => ({
         member: m.name,
-        breakfast: mealData[m.name]?.breakfast || 0,
-        lunch: mealData[m.name]?.lunch || 0,
-        dinner: mealData[m.name]?.dinner || 0
+        breakfast: parseFloat(mealData[m.name]?.breakfast) || 0,
+        lunch: parseFloat(mealData[m.name]?.lunch) || 0,
+        dinner: parseFloat(mealData[m.name]?.dinner) || 0
       }));
 
       await saveMeals(currentMonth, mealsArray, mealDate);
-      alert('Meals saved successfully!');
+      alert(`Meals saved successfully for ${mealDate}!`);
     } catch (err) {
       alert('Failed to save meals: ' + err.message);
     } finally {
@@ -71,16 +74,20 @@ export default function DailyMeal({ currentMonth, user }) {
     }
   };
 
-  // Totals calculation
+  // Daily totals calculation
   let totalBreakfast = 0;
   let totalLunch = 0;
   let totalDinner = 0;
 
   members.forEach((m) => {
-    totalBreakfast += mealData[m.name]?.breakfast || 0;
-    totalLunch += mealData[m.name]?.lunch || 0;
-    totalDinner += mealData[m.name]?.dinner || 0;
+    totalBreakfast += parseFloat(mealData[m.name]?.breakfast) || 0;
+    totalLunch += parseFloat(mealData[m.name]?.lunch) || 0;
+    totalDinner += parseFloat(mealData[m.name]?.dinner) || 0;
   });
+
+  totalBreakfast = Number(totalBreakfast.toFixed(2));
+  totalLunch = Number(totalLunch.toFixed(2));
+  totalDinner = Number(totalDinner.toFixed(2));
 
   if (loading) return <div className="loading-spinner">Loading meal details...</div>;
 
@@ -139,8 +146,8 @@ export default function DailyMeal({ currentMonth, user }) {
       <section className="card">
         <div className="section-header">
           <div>
-            <h2>Member Meal Entry</h2>
-            <p>Enter meal count for each member</p>
+            <h2>Member Meal Entry ({mealDate})</h2>
+            <p>Enter meal count for each member (Supports fractions e.g. 0.5, 1.05)</p>
           </div>
         </div>
 
@@ -158,10 +165,14 @@ export default function DailyMeal({ currentMonth, user }) {
             </thead>
             <tbody>
               {members.map((member, idx) => {
-                const b = mealData[member.name]?.breakfast || 0;
-                const l = mealData[member.name]?.lunch || 0;
-                const d = mealData[member.name]?.dinner || 0;
-                const rowTotal = b + l + d;
+                const bVal = mealData[member.name]?.breakfast !== undefined ? mealData[member.name]?.breakfast : '';
+                const lVal = mealData[member.name]?.lunch !== undefined ? mealData[member.name]?.lunch : '';
+                const dVal = mealData[member.name]?.dinner !== undefined ? mealData[member.name]?.dinner : '';
+
+                const bNum = parseFloat(bVal) || 0;
+                const lNum = parseFloat(lVal) || 0;
+                const dNum = parseFloat(dVal) || 0;
+                const rowTotal = Number((bNum + lNum + dNum).toFixed(2));
 
                 return (
                   <tr key={member._id}>
@@ -170,10 +181,12 @@ export default function DailyMeal({ currentMonth, user }) {
                     <td>
                       <input
                         type="number"
+                        step="0.01"
                         min="0"
+                        placeholder="0"
                         className="input-field"
-                        style={{ width: '80px', textAlign: 'center' }}
-                        value={b}
+                        style={{ width: '90px', textAlign: 'center' }}
+                        value={bVal}
                         disabled={!canEdit}
                         onChange={(e) => handleInputChange(member.name, 'breakfast', e.target.value)}
                       />
@@ -181,10 +194,12 @@ export default function DailyMeal({ currentMonth, user }) {
                     <td>
                       <input
                         type="number"
+                        step="0.01"
                         min="0"
+                        placeholder="0"
                         className="input-field"
-                        style={{ width: '80px', textAlign: 'center' }}
-                        value={l}
+                        style={{ width: '90px', textAlign: 'center' }}
+                        value={lVal}
                         disabled={!canEdit}
                         onChange={(e) => handleInputChange(member.name, 'lunch', e.target.value)}
                       />
@@ -192,10 +207,12 @@ export default function DailyMeal({ currentMonth, user }) {
                     <td>
                       <input
                         type="number"
+                        step="0.01"
                         min="0"
+                        placeholder="0"
                         className="input-field"
-                        style={{ width: '80px', textAlign: 'center' }}
-                        value={d}
+                        style={{ width: '90px', textAlign: 'center' }}
+                        value={dVal}
                         disabled={!canEdit}
                         onChange={(e) => handleInputChange(member.name, 'dinner', e.target.value)}
                       />
